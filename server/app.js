@@ -5,17 +5,19 @@ import helmet from "helmet";
 
 import "dotenv/config";
 import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+
 const app = express();
 
-// ==============================
+
 // SECURITY
-// ==============================
+
 
 app.use(helmet());
 
-// ==============================
+
 // CORS
-// ==============================
+
 
 app.use(
   cors({
@@ -24,28 +26,28 @@ app.use(
   }),
 );
 
-// ==============================
+
 // BODY PARSER
-// ==============================
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ==============================
+
 // COOKIE PARSER
-// ==============================
+
 
 app.use(cookieParser());
 
-// ==============================
+
 // ROUTES
-// ==============================
+
 
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 
-// ==============================
 // TEST ROUTE
-// ==============================
+
 
 app.get("/", (req, res) => {
   res.status(200).json({
