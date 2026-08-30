@@ -1,6 +1,13 @@
 import express from "express";
 
-import { createJob } from "../controllers/jobController.js";
+import {
+  createJob,
+  getAllJobs,
+  getJobById,
+  searchJobs,
+  updateJob,
+  deleteJob,
+} from "../controllers/jobController.js";
 
 import { createJobValidator } from "../validators/jobValidator.js";
 
@@ -13,5 +20,35 @@ const router = express.Router();
 // ==========================================
 
 router.post("/", authMiddleware, createJobValidator, createJob);
+
+// ==========================================
+// SEARCH & FILTER JOBS
+// ==========================================
+
+router.get("/search", searchJobs);
+
+// ==========================================
+// GET ALL ACTIVE JOBS
+// ==========================================
+
+router.get("/", getAllJobs);
+
+// ==========================================
+// UPDATE JOB
+// ==========================================
+
+router.put("/:id", authMiddleware, updateJob);
+
+// ==========================================
+// DELETE JOB
+// ==========================================
+
+router.delete("/:id", authMiddleware, deleteJob);
+
+// ==========================================
+// GET SINGLE JOB
+// ==========================================
+
+router.get("/:id", getJobById);
 
 export default router;
