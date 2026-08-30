@@ -1,6 +1,6 @@
 import express from "express";
 
-import { register, verifyOTP, login } from "../controllers/authController.js";
+import { register, verifyOTP, login, logout } from "../controllers/authController.js";
 
 
 import {
@@ -18,4 +18,5 @@ router.post("/verify-otp", verifyOTPValidator, verifyOTP);
 
 router.post("/login", loginValidator, login);
 
+router.post("/logout", logout);
 export default router;
