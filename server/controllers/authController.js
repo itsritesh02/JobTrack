@@ -10,9 +10,9 @@ import bcrypt from "bcryptjs";
 
 import generateToken from "../utils/generateToken.js";
 
-// ==========================================
+
 // REGISTER
-// ==========================================
+
 
 export const register = async (req, res, next) => {
   try {
@@ -155,9 +155,9 @@ export const register = async (req, res, next) => {
   }
 };
 
-// ==========================================
+
 // VERIFY OTP
-// ==========================================
+
 
 export const verifyOTP = async (req, res, next) => {
   try {
@@ -245,9 +245,9 @@ export const verifyOTP = async (req, res, next) => {
   }
 };
 
-// ==========================================
+
 // LOGIN
-// ==========================================
+
 
 export const login = async (req, res, next) => {
   try {
@@ -385,6 +385,30 @@ export const login = async (req, res, next) => {
   } catch (error) {
     console.error("Login Error:", error);
 
+    next(error);
+  }
+};
+
+
+
+// LOGOUT
+
+export const logout = async (req, res, next) => {
+  try {
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite:
+        process.env.NODE_ENV === "production"
+          ? "none"
+          : "lax",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Logout successful",
+    });
+  } catch (error) {
     next(error);
   }
 };
