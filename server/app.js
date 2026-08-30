@@ -6,6 +6,8 @@ import helmet from "helmet";
 import "dotenv/config";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import jobRoutes from "./routes/jobRoutes.js";
+
 
 const app = express();
 
@@ -45,7 +47,7 @@ app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
-
+app.use("/api/jobs", jobRoutes);
 // TEST ROUTE
 
 
