@@ -1,5 +1,7 @@
+import mongoose from "mongoose";
 import { validationResult } from "express-validator";
 import Job from "../models/Job.js";
+import Application from "../models/Application.js";
 
 // ==========================================
 // CREATE JOB
@@ -7,10 +9,6 @@ import Job from "../models/Job.js";
 
 export const createJob = async (req, res, next) => {
   try {
-    // ==========================================
-    // VALIDATION
-    // ==========================================
-
     const errors = validationResult(req);
 
     if (!errors.isEmpty()) {
@@ -19,10 +17,6 @@ export const createJob = async (req, res, next) => {
         errors: errors.array(),
       });
     }
-
-    // ==========================================
-    // GET JOB DATA
-    // ==========================================
 
     const {
       title,
@@ -34,10 +28,6 @@ export const createJob = async (req, res, next) => {
       experience,
       skills,
     } = req.body;
-
-    // ==========================================
-    // CREATE JOB
-    // ==========================================
 
     const job = await Job.create({
       title,
@@ -51,10 +41,6 @@ export const createJob = async (req, res, next) => {
       postedBy: req.user._id,
     });
 
-    // ==========================================
-    // RESPONSE
-    // ==========================================
-
     return res.status(201).json({
       success: true,
       message: "Job created successfully",
@@ -66,7 +52,6 @@ export const createJob = async (req, res, next) => {
     next(error);
   }
 };
-
 
 // ==========================================
 // GET ALL ACTIVE JOBS
@@ -98,6 +83,21 @@ export const getJobById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    // ==========================================
+    // CHECK VALID MONGODB OBJECT ID
+    // ==========================================
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid job ID",
+      });
+    }
+
+    // ==========================================
+    // FIND ACTIVE JOB
+    // ==========================================
+
     const job = await Job.findOne({
       _id: id,
       status: "active",
@@ -121,20 +121,13 @@ export const getJobById = async (req, res, next) => {
   }
 };
 
-
-
 // ==========================================
 // SEARCH & FILTER JOBS
 // ==========================================
 
 export const searchJobs = async (req, res, next) => {
   try {
-    const {
-      keyword,
-      location,
-      jobType,
-      experience,
-    } = req.query;
+    const { keyword, location, jobType, experience } = req.query;
 
     const filter = {
       status: "active",
@@ -205,9 +198,29 @@ export const searchJobs = async (req, res, next) => {
       .populate("postedBy", "name email")
       .sort({ createdAt: -1 });
 
-    // ==========================================
-    // RESPONSE
-    // ==========================================
+    return res.status(200).json({
+      success: true,
+      count: jobs.length,
+      data: {
+        jobs,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==========================================
+// GET MY JOBS
+// ==========================================
+
+export const getMyJobs = async (req, res, next) => {
+  try {
+    const jobs = await Job.find({
+      postedBy: req.user._id,
+    })
+      .populate("postedBy", "name email")
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
@@ -222,12 +235,110 @@ export const searchJobs = async (req, res, next) => {
 };
 
 // ==========================================
+// GET JOB STATISTICS
+// ==========================================
+
+export const getJobStats = async (req, res, next) => {
+  try {
+    // ==========================================
+    // FIND MY JOBS
+    // ==========================================
+
+    const jobs = await Job.find({
+      postedBy: req.user._id,
+    }).select("_id status");
+
+    const jobIds = jobs.map((job) => job._id);
+
+    // ==========================================
+    // JOB STATS
+    // ==========================================
+
+    const totalJobs = jobs.length;
+
+    const activeJobs = jobs.filter((job) => job.status === "active").length;
+
+    const inactiveJobs = jobs.filter((job) => job.status !== "active").length;
+
+    // ==========================================
+    // APPLICATION STATS
+    // ==========================================
+
+    const totalApplications = await Application.countDocuments({
+      job: { $in: jobIds },
+    });
+
+    const applied = await Application.countDocuments({
+      job: { $in: jobIds },
+      status: "Applied",
+    });
+
+    const shortlisted = await Application.countDocuments({
+      job: { $in: jobIds },
+      status: "Shortlisted",
+    });
+
+    const interview = await Application.countDocuments({
+      job: { $in: jobIds },
+      status: "Interview",
+    });
+
+    const hired = await Application.countDocuments({
+      job: { $in: jobIds },
+      status: "Hired",
+    });
+
+    const rejected = await Application.countDocuments({
+      job: { $in: jobIds },
+      status: "Rejected",
+    });
+
+    // ==========================================
+    // RESPONSE
+    // ==========================================
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        jobs: {
+          total: totalJobs,
+          active: activeJobs,
+          inactive: inactiveJobs,
+        },
+
+        applications: {
+          total: totalApplications,
+          applied,
+          shortlisted,
+          interview,
+          hired,
+          rejected,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==========================================
 // UPDATE JOB
 // ==========================================
 
 export const updateJob = async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    // ==========================================
+    // CHECK VALID MONGODB OBJECT ID
+    // ==========================================
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid job ID",
+      });
+    }
 
     const {
       title,
@@ -311,10 +422,6 @@ export const updateJob = async (req, res, next) => {
 
     await job.save();
 
-    // ==========================================
-    // RESPONSE
-    // ==========================================
-
     return res.status(200).json({
       success: true,
       message: "Job updated successfully",
@@ -334,6 +441,17 @@ export const updateJob = async (req, res, next) => {
 export const deleteJob = async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    // ==========================================
+    // CHECK VALID MONGODB OBJECT ID
+    // ==========================================
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid job ID",
+      });
+    }
 
     // ==========================================
     // FIND JOB
@@ -365,10 +483,6 @@ export const deleteJob = async (req, res, next) => {
 
     await Job.findByIdAndDelete(id);
 
-    // ==========================================
-    // RESPONSE
-    // ==========================================
-
     return res.status(200).json({
       success: true,
       message: "Job deleted successfully",
@@ -377,4 +491,3 @@ export const deleteJob = async (req, res, next) => {
     next(error);
   }
 };
-
