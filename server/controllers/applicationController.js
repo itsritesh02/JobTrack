@@ -1,3 +1,5 @@
+
+import mongoose from "mongoose";
 import Application from "../models/Application.js";
 import Job from "../models/Job.js";
 import Notification from "../models/Notification.js";
@@ -10,6 +12,17 @@ export const applyForJob = async (req, res, next) => {
   try {
     const { jobId } = req.params;
     const { coverLetter } = req.body;
+
+    // ==========================================
+    // VALIDATE JOB ID
+    // ==========================================
+
+    if (!mongoose.Types.ObjectId.isValid(jobId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid job ID",
+      });
+    }
 
     // ==========================================
     // CHECK JOB
@@ -28,7 +41,7 @@ export const applyForJob = async (req, res, next) => {
     }
 
     // ==========================================
-    // PREVENT RECRUITER APPLYING TO OWN JOB
+    // PREVENT APPLYING TO OWN JOB
     // ==========================================
 
     if (job.postedBy.toString() === req.user._id.toString()) {
@@ -61,7 +74,8 @@ export const applyForJob = async (req, res, next) => {
     const application = await Application.create({
       candidate: req.user._id,
       job: jobId,
-      coverLetter: coverLetter || "",
+      coverLetter:
+        typeof coverLetter === "string" ? coverLetter.trim() : "",
     });
 
     // ==========================================
@@ -94,6 +108,17 @@ export const applyForJob = async (req, res, next) => {
 
 export const getMyApplications = async (req, res, next) => {
   try {
+    // ==========================================
+    // DEBUG USER
+    // ==========================================
+
+    console.log("LOGGED IN USER ID:", req.user._id);
+    console.log("LOGGED IN USER:", req.user);
+
+    // ==========================================
+    // FIND APPLICATIONS
+    // ==========================================
+
     const applications = await Application.find({
       candidate: req.user._id,
     })
@@ -102,6 +127,15 @@ export const getMyApplications = async (req, res, next) => {
         "title company salary location jobType experience skills status",
       )
       .sort({ createdAt: -1 });
+
+    console.log(
+      "MY APPLICATIONS COUNT:",
+      applications.length,
+    );
+
+    // ==========================================
+    // RESPONSE
+    // ==========================================
 
     return res.status(200).json({
       success: true,
@@ -124,6 +158,17 @@ export const getJobApplications = async (req, res, next) => {
     const { jobId } = req.params;
 
     // ==========================================
+    // VALIDATE JOB ID
+    // ==========================================
+
+    if (!mongoose.Types.ObjectId.isValid(jobId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid job ID",
+      });
+    }
+
+    // ==========================================
     // FIND JOB
     // ==========================================
 
@@ -140,7 +185,9 @@ export const getJobApplications = async (req, res, next) => {
     // CHECK JOB OWNER
     // ==========================================
 
-    if (job.postedBy.toString() !== req.user._id.toString()) {
+    if (
+      job.postedBy.toString() !== req.user._id.toString()
+    ) {
       return res.status(403).json({
         success: false,
         message: "You are not allowed to view these applications",
@@ -155,8 +202,15 @@ export const getJobApplications = async (req, res, next) => {
       job: jobId,
     })
       .populate("candidate", "name email profile")
-      .populate("job", "title company location jobType experience")
+      .populate(
+        "job",
+        "title company location jobType experience",
+      )
       .sort({ createdAt: -1 });
+
+    // ==========================================
+    // RESPONSE
+    // ==========================================
 
     return res.status(200).json({
       success: true,
@@ -174,10 +228,25 @@ export const getJobApplications = async (req, res, next) => {
 // UPDATE APPLICATION STATUS
 // ==========================================
 
-export const updateApplicationStatus = async (req, res, next) => {
+export const updateApplicationStatus = async (
+  req,
+  res,
+  next,
+) => {
   try {
     const { applicationId } = req.params;
     const { status } = req.body;
+
+    // ==========================================
+    // VALIDATE APPLICATION ID
+    // ==========================================
+
+    if (!mongoose.Types.ObjectId.isValid(applicationId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid application ID",
+      });
+    }
 
     // ==========================================
     // VALIDATE STATUS
@@ -203,7 +272,9 @@ export const updateApplicationStatus = async (req, res, next) => {
     // ==========================================
 
     const application =
-      await Application.findById(applicationId).populate("job");
+      await Application.findById(applicationId).populate(
+        "job",
+      );
 
     if (!application) {
       return res.status(404).json({
@@ -216,7 +287,10 @@ export const updateApplicationStatus = async (req, res, next) => {
     // CHECK JOB OWNER
     // ==========================================
 
-    if (application.job.postedBy.toString() !== req.user._id.toString()) {
+    if (
+      application.job.postedBy.toString() !==
+      req.user._id.toString()
+    ) {
       return res.status(403).json({
         success: false,
         message: "You are not allowed to update this application",
@@ -232,7 +306,7 @@ export const updateApplicationStatus = async (req, res, next) => {
     await application.save();
 
     // ==========================================
-    // CREATE NOTIFICATION FOR CANDIDATE
+    // CREATE NOTIFICATION
     // ==========================================
 
     const notification = await Notification.create({
@@ -252,6 +326,78 @@ export const updateApplicationStatus = async (req, res, next) => {
         application,
         notification,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==========================================
+// WITHDRAW APPLICATION
+// ==========================================
+
+export const withdrawApplication = async (
+  req,
+  res,
+  next,
+) => {
+  try {
+    const { applicationId } = req.params;
+
+    // ==========================================
+    // VALIDATE APPLICATION ID
+    // ==========================================
+
+    if (!mongoose.Types.ObjectId.isValid(applicationId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid application ID",
+      });
+    }
+
+    // ==========================================
+    // FIND CANDIDATE'S APPLICATION
+    // ==========================================
+
+    const application = await Application.findOne({
+      _id: applicationId,
+      candidate: req.user._id,
+    });
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
+    // ==========================================
+    // PREVENT WITHDRAWING AFTER FINAL DECISION
+    // ==========================================
+
+    if (
+      application.status === "Hired" ||
+      application.status === "Rejected"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: `You cannot withdraw an application with status "${application.status}"`,
+      });
+    }
+
+    // ==========================================
+    // DELETE APPLICATION
+    // ==========================================
+
+    await Application.findByIdAndDelete(applicationId);
+
+    // ==========================================
+    // RESPONSE
+    // ==========================================
+
+    return res.status(200).json({
+      success: true,
+      message: "Application withdrawn successfully",
     });
   } catch (error) {
     next(error);
