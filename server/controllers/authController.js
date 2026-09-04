@@ -249,6 +249,10 @@ export const verifyOTP = async (req, res, next) => {
 // LOGIN
 
 
+// ==========================================
+// LOGIN
+// ==========================================
+
 export const login = async (req, res, next) => {
   try {
     // ==========================================
@@ -312,11 +316,14 @@ export const login = async (req, res, next) => {
     // ==========================================
 
     if (!user.password) {
-      console.error("ERROR: User password is missing from database");
+      console.error(
+        "ERROR: User password is missing from database",
+      );
 
       return res.status(500).json({
         success: false,
-        message: "User password is missing. Please register again.",
+        message:
+          "User password is missing. Please register again.",
       });
     }
 
@@ -324,7 +331,10 @@ export const login = async (req, res, next) => {
     // COMPARE PASSWORD
     // ==========================================
 
-    const isPasswordMatch = await bcrypt.compare(password, user.password);
+    const isPasswordMatch = await bcrypt.compare(
+      password,
+      user.password,
+    );
 
     // ==========================================
     // INVALID PASSWORD
@@ -352,7 +362,10 @@ export const login = async (req, res, next) => {
 
       secure: process.env.NODE_ENV === "production",
 
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite:
+        process.env.NODE_ENV === "production"
+          ? "none"
+          : "lax",
 
       maxAge: 24 * 60 * 60 * 1000,
     });
@@ -380,6 +393,9 @@ export const login = async (req, res, next) => {
           email: user.email,
           role: user.role,
         },
+
+        // JWT TOKEN
+        token,
       },
     });
   } catch (error) {
@@ -388,7 +404,6 @@ export const login = async (req, res, next) => {
     next(error);
   }
 };
-
 
 
 // LOGOUT
