@@ -5,6 +5,7 @@ import {
   getMyApplications,
   getJobApplications,
   updateApplicationStatus,
+  withdrawApplication,
 } from "../controllers/applicationController.js";
 
 import authMiddleware from "../middleware/authMiddleware.js";
@@ -34,5 +35,11 @@ router.get("/job/:jobId", authMiddleware, getJobApplications);
 // ==========================================
 
 router.patch("/:applicationId/status", authMiddleware, updateApplicationStatus);
+
+// ==========================================
+// WITHDRAW APPLICATION - CANDIDATE
+// ==========================================
+
+router.delete("/:applicationId/withdraw", authMiddleware, withdrawApplication);
 
 export default router;
